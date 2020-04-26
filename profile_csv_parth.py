@@ -1,5 +1,7 @@
 import requests
 import pandas as pd
+import time
+
 
 df = pd.DataFrame()
 ids=[]
@@ -17,6 +19,7 @@ elif region == "3" or region =="sg":
 
 acc_id = input("Enter your CleverTap account ID: \n")
 pass_code = input("Enter the pass-code: \n")
+retry_counter=0
 
 
 payload = "{\n    \"event_name\": \"-1\",\n    \"common_profile_properties\": {\n        \"profile_fields\": [\n            {\n                \"name\": \"bad_identities\",\n                \"operator\": \"exists\",\n                \"value\": \"-1\"\n            }\n        ]\n    }\n}"
@@ -33,8 +36,21 @@ next_cursor = cursor
 while next_cursor is not None:
   params =(('cursor', next_cursor),)
   response = requests.get(url = url+"?cursor="+next_cursor,headers = headers)
-  print(response, response.content)
-https://github.com/yash-kantharia/CSV-codes-Python-
+  print(response, response.json()["status"])
+  while response.json()["status"]=="fail":
+    time.sleep(15)
+    response = requests.get(url = url+"?cursor="+next_cursor,headers = headers)
+    print("Retry Made")
+    print(response, response.json()["status"])
+    retry_counter=retry_counter+1
+    if retry_counter>2:
+      continue_retry = input("Do you want to continue trying? y/n :")
+      if continue_retry=="y":
+        retry_counter=0
+      else:
+        print("Terminating process")
+        exit()
+
   record = response.json()['records']
   if len(record)==0:
     break
@@ -52,12 +68,12 @@ https://github.com/yash-kantharia/CSV-codes-Python-
 df_1 = pd.DataFrame(ids)
 df_1.columns=["Identity"]
 
-df_1 = pd.DataFrame(ids)
-df_1.columns=["Identity"]
+df_2 = pd.DataFrame(all_ids)
+df_2.columns=["All_ids"]
 
 result = pd.concat([df_1,df_2],axis=1)
 result.head(10)
 
-save_csv = input("Do you want to save this list as a csv in the pwd? y/n")
-if save_csv="y":
+save_csv = input("Do you want to save this list as a csv in the pwd? y/n: ")
+if save_csv=="y":
   result.to_csv("result.csv")
